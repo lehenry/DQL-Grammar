@@ -3,7 +3,7 @@
  */
 grammar DQL;
 
-dql_stmt: (select_stmt|alter_type_stmt|alter_group_stmt|drop_group_stmt|drop_type_stmt|create_group_stmt|create_type_stmt) SCOL?;
+dql_stmt: (select_stmt|alter_type_stmt|alter_group_stmt|drop_group_stmt|drop_type_stmt|create_group_stmt|create_type_stmt|execute_stmt|update_stmt|change_object_stmt|insert_stmt|update_object_stmt|grant_stmt|revoke_stmt|delete_object_stmt|delete_stmt) SCOL?;
  
 select_stmt: K_SELECT (K_FOR (K_BROWSE | K_READ | K_RELATE | K_WRITE | K_DELETE))? ( K_DISTINCT | K_ALL )? result_column ( COMMA result_column )*
     K_FROM ( table_or_subquery ( COMMA table_or_subquery )* ) (K_WITH expr)? in_partition? in_document_or_assembly? search_clause?
@@ -26,8 +26,54 @@ select_stmt: K_SELECT (K_FOR (K_BROWSE | K_READ | K_RELATE | K_WRITE | K_DELETE)
  K_DROP K_GROUP any_name
  ;
  
+ //TODO MODIFY, ASPECTS
  alter_type_stmt:
  K_ALTER K_TYPE any_name (K_ADD|K_DROP) property_def (COMMA  property_def)* K_PUBLISH?
+ ;
+
+ //TODO
+ update_object_stmt:
+ K_UPDATE any_name (K_OBJECT|K_OBJECTS)
+ ;
+  
+ //TODO
+ update_stmt:
+ K_UPDATE any_name K_SET expr_simple EQU literal_value (K_WHERE qualification)?
+ ;
+ 
+ //TODO
+ insert_stmt:
+ K_INSERT K_INTO any_name column_name (COMMA column_name)* K_VALUES ((OPEN_PAR literal_value (COMMA literal_value)* CLOSE_PAR)| select_stmt )
+ ;
+ 
+ //TODO	
+ execute_stmt:
+ K_EXECUTE admin_methods
+ ;
+ 
+ //TODO
+ grant_stmt:
+ K_GRANT privilege (COMMA privilege)* K_TO STRING_LITERAL (COMMA STRING_LITERAL)*
+ ;
+ 
+  //TODO
+ revoke_stmt:
+ K_REVOKE privilege (COMMA privilege)* K_FROM STRING_LITERAL (COMMA STRING_LITERAL)*
+ ;
+ 
+ 
+ //TODO
+ change_object_stmt:
+ K_CHANGE any_name K_OBJECT
+ ;
+ 
+ //TODO
+ delete_object_stmt:
+ K_DELETE any_name (K_OBJECT|K_OBJECTS) (K_WHERE qualification)?
+ ;
+ 
+ delete_stmt:
+ K_DELETE K_FROM any_name (K_WHERE qualification)?
  ;
  
  property_def:
@@ -41,8 +87,10 @@ select_stmt: K_SELECT (K_FOR (K_BROWSE | K_READ | K_RELATE | K_WRITE | K_DELETE)
  domain:
  K_INTEGER|K_BOOLEAN|(K_STRING OPEN_PAR INTEGER_LITERAL CLOSE_PAR)
  ;
+ 
+ //TODO ASPECTS, CONSTRAINTS...
  create_type_stmt:
- K_CREATE (K_PUBLIC|K_PRIVATE)? K_TYPE STRING_LITERAL (K_WITH)? (K_ADDRESS STRING_LITERAL)? 
+ K_CREATE K_TYPE (K_PARTITIONABLE|K_SHAREABLE) STRING_LITERAL (K_WITH)? (K_ADDRESS STRING_LITERAL)? 
  ( K_MEMBERS (STRING_LITERAL (COMMA STRING_LITERAL)*| OPEN_PAR select_stmt CLOSE_PAR))?
  ;
  
@@ -107,6 +155,18 @@ expr
  | ( K_NULL | K_NULLID | K_NULLSTRING | K_NULLDATE | K_NULLINT )
  ;
 
+//TODO
+privilege:
+K_SUPERUSER
+|K_SYSADMIN
+//CREATE TYPE
+//CREATE CABINET
+//CREATE GROUP
+//CONFIG AUDIT
+//PURGE AUDIT
+//VIEW AUDIT
+;
+
 function_name:
 K_SUBSTR
 |K_SUBSTRING
@@ -127,6 +187,7 @@ K_SUBSTR OPEN_PAR expr_simple COMMA INTEGER_LITERAL (COMMA INTEGER_LITERAL)? CLO
 function_predicate
 :
  (K_FOLDER|K_CABINET) OPEN_PAR (STRING_LITERAL|function_id) (COMMA K_DESCEND)? CLOSE_PAR
+| K_TYPE OPEN_PAR STRING_LITERAL CLOSE_PAR
 ;
 
 function_id
@@ -212,6 +273,13 @@ table_or_index_name
 boolean_value:
 TRUE|FALSE
 ;
+
+//TODO
+admin_methods:
+
+
+;
+
 
 dql_keywords: K_ACL
 | K_ASCII
@@ -654,6 +722,7 @@ K_PRIVATE : P R I V A T E;
 K_PARENT : P A R E N T;
 K_POLICY : P O L I C Y;
 K_PRIVILEGES : P R I V I L E G E S;
+K_PARTITIONABLE : P A R T I T I O N A B L E;
 K_PARTITION : P A R T I T I O N;
 K_POSITION : P O S I T I O N;
 K_PROPERTY : P R O P E R T Y;
@@ -674,6 +743,7 @@ K_REPEATING : R E P E A T I N G;
 K_REVOKE : R E V O K E;
 K_REGISTER : R E G I S T E R;
 K_REPLACEIF : R E P L A C E I F;
+K_SHAREABLE : S H A R E A B L E;
 K_SCORE : S C O R E;
 K_SMALLINT : S M A L L I N T;
 K_SUPERTYPE : S U P E R T Y P E;
@@ -695,7 +765,6 @@ K_SYSOBJ_ID : S Y S O B J UNDERSCORE I D;
 K_SETFILE : S E T F I L E;
 K_SUBSTRING : S U B S T R I N G;
 K_SYSTEM : S Y S T E M;
-K_SHAREABLE : S H A R E A B L E;
 K_SUM : S U M;
 K_SHARES : S H A R E S;
 K_SUMMARY : S U M M A R Y;
