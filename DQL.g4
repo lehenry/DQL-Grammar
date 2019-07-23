@@ -3,9 +3,9 @@
  */
 grammar DQL;
 
-dql_stmt: (select_stmt|alter_type_stmt|alter_group_stmt|drop_group_stmt|drop_type_stmt|create_group_stmt|create_type_stmt|execute_stmt|update_stmt|change_object_stmt|insert_stmt|update_object_stmt|grant_stmt|revoke_stmt|delete_object_stmt|delete_stmt) SCOL?;
+dql_stmt: (select_stmt|alter_group_stmt|create_group_stmt|drop_group_stmt|alter_type_stmt|create_type_stmt|drop_type_stmt|update_object_stmt|insert_stmt|update_stmt|execute_stmt|grant_stmt|revoke_stmt|change_object_stmt|delete_object_stmt|delete_stmt) SCOL?;
  
-select_stmt: K_SELECT (K_FOR (K_BROWSE | K_READ | K_RELATE | K_WRITE | K_DELETE))? ( K_DISTINCT | K_ALL )? result_column ( COMMA result_column )*
+ select_stmt: K_SELECT (K_FOR (K_BROWSE | K_READ | K_RELATE | K_WRITE | K_DELETE))? ( K_DISTINCT | K_ALL )? result_column ( COMMA result_column )*
     K_FROM ( table_or_subquery ( COMMA table_or_subquery )* ) (K_WITH expr)? in_partition? in_document_or_assembly? search_clause?
    ( K_WHERE qualification )?
    ( K_GROUP K_BY column_name ( COMMA column_name)* ( K_HAVING (aggregate|count)( '<' | '<=' | '>' | '>=' | '=' ) NUMERIC_LITERAL )? )?  (hint_function)?
@@ -17,7 +17,7 @@ select_stmt: K_SELECT (K_FOR (K_BROWSE | K_READ | K_RELATE | K_WRITE | K_DELETE)
  |K_ALTER K_GROUP any_name K_SET K_PRIVATE boolean_value
  ;
  
-  create_group_stmt:
+ create_group_stmt:
  K_CREATE (K_PUBLIC|K_PRIVATE)? K_GROUP any_name (K_WITH)? (K_ADDRESS STRING_LITERAL)? 
  ( K_MEMBERS (any_name (COMMA any_name)*| OPEN_PAR select_stmt CLOSE_PAR))?
  ;
@@ -31,21 +31,40 @@ select_stmt: K_SELECT (K_FOR (K_BROWSE | K_READ | K_RELATE | K_WRITE | K_DELETE)
  K_ALTER K_TYPE any_name (K_ADD|K_DROP) property_def (COMMA  property_def)* K_PUBLISH?
  ;
 
- //TODO
- update_object_stmt:
- K_UPDATE any_name (K_OBJECT|K_OBJECTS)
- ;
-  
- //TODO
- update_stmt:
- K_UPDATE any_name K_SET expr_simple EQU literal_value (K_WHERE qualification)?
+//TODO ASPECTS, CONSTRAINTS...
+ create_type_stmt:
+ K_CREATE K_TYPE (K_PARTITIONABLE|K_SHAREABLE) STRING_LITERAL (K_WITH)? (K_ADDRESS STRING_LITERAL)? 
+ ( K_MEMBERS (STRING_LITERAL (COMMA STRING_LITERAL)*| OPEN_PAR select_stmt CLOSE_PAR))?
  ;
  
- //TODO
+ drop_type_stmt:
+ K_DROP K_TYPE STRING_LITERAL
+ ;
+ 
+// UPDATE [PUBLIC]type_name [(ALL)][correlation_var]
+// [WITHIN PARTITION partition_id {,partition_id}]
+// OBJECT[S] update_list
+// [,SETFILE filepath WITH CONTENT_FORMAT=format_name]
+// {,SETFILE filepath WITH PAGE_NO=page_number}
+// [IN ASSEMBLY document_id [VERSION version_label][NODE component_id] [DESCEND]]
+// [SEARCH fulltext search condition]
+// [WHERE qualification]
+ update_object_stmt:
+ K_UPDATE type_name all? any_name? in_partition? (K_OBJECT|K_OBJECTS) update_list (COMMA update_list)* setfile? in_assembly? search_clause? (K_WHERE qualification)?
+ ;
+
+ // INSERT INTO table_name [(column_name {,column_name})] 
+ // VALUES (value {,value}) | dql_subselect
  insert_stmt:
  K_INSERT K_INTO any_name column_name (COMMA column_name)* K_VALUES ((OPEN_PAR literal_value (COMMA literal_value)* CLOSE_PAR)| select_stmt )
  ;
- 
+   
+// UPDATE table_name SET column_assignments
+// [WHERE qualification]
+ update_stmt:
+ K_UPDATE any_name K_SET expr_simple EQU literal_value (K_WHERE qualification)?
+ ;
+  
  //TODO	
  execute_stmt:
  K_EXECUTE admin_methods
@@ -76,6 +95,22 @@ select_stmt: K_SELECT (K_FOR (K_BROWSE | K_READ | K_RELATE | K_WRITE | K_DELETE)
  K_DELETE K_FROM any_name (K_WHERE qualification)?
  ;
  
+ update_list:
+  K_SET property_name repeating_index? '=' (literal_value| OPEN_PAR select_stmt CLOSE_PAR)
+ |K_APPEND repeating_index? property_name '=' (literal_value| OPEN_PAR select_stmt CLOSE_PAR)
+ |K_INSERT property_name repeating_index? '=' (literal_value| OPEN_PAR select_stmt CLOSE_PAR)
+ |K_REMOVE property_name repeating_index?
+ |K_TRUNCATE property_name repeating_index?
+ |K_LINK STRING_LITERAL
+ |K_UNLINK STRING_LITERAL
+ |K_MOVE K_TO? STRING_LITERAL
+ ;
+ 
+ setfile:
+ K_SETFILE STRING_LITERAL K_WITH K_CONTENT_FORMAT '=' STRING_LITERAL
+ (COMMA K_SETFILE STRING_LITERAL K_WITH K_PAGE_NO '=' NUMERIC_LITERAL)*
+ ;
+ 
  property_def:
  property_name domain K_REPEATING? (K_NOT? K_QUALIFIABLE)?
  ;
@@ -85,18 +120,9 @@ select_stmt: K_SELECT (K_FOR (K_BROWSE | K_READ | K_RELATE | K_WRITE | K_DELETE)
  ;
  
  domain:
- K_INTEGER|K_BOOLEAN|(K_STRING OPEN_PAR INTEGER_LITERAL CLOSE_PAR)
+ K_INTEGER|K_BOOLEAN|(K_STRING OPEN_PAR NUMERIC_LITERAL CLOSE_PAR)
  ;
  
- //TODO ASPECTS, CONSTRAINTS...
- create_type_stmt:
- K_CREATE K_TYPE (K_PARTITIONABLE|K_SHAREABLE) STRING_LITERAL (K_WITH)? (K_ADDRESS STRING_LITERAL)? 
- ( K_MEMBERS (STRING_LITERAL (COMMA STRING_LITERAL)*| OPEN_PAR select_stmt CLOSE_PAR))?
- ;
- 
- drop_type_stmt:
- K_DROP K_TYPE STRING_LITERAL
- ;
  
  
  search_clause
@@ -108,20 +134,24 @@ select_stmt: K_SELECT (K_FOR (K_BROWSE | K_READ | K_RELATE | K_WRITE | K_DELETE)
  ;
   
  in_partition
- : K_WITHIN K_PARTITION documentum_id
+ : K_WITHIN K_PARTITION function_id (COMMA function_id)*
  ;
  
  in_document_or_assembly
  : (K_DOCUMENT|K_ASSEMBLY) function_id (K_VERSION any_name)? K_DESCEND? (K_WITH expr)? (K_NODESORT K_BY column_name (COMMA column_name)* sort_order?)?
  ;
-  
+
+ in_assembly
+ : (K_ASSEMBLY) function_id (K_VERSION any_name)? (K_NODE function_id)? K_DESCEND?
+ ;
+    
 
 sort_order
 : K_ASC|K_DESC
 ;
   
 table_or_subquery
- : ( repo_owner COMMA )? table_name (OPEN_PAR K_ALL CLOSE_PAR)? ( table_alias )?
+ : ( repo_owner COMMA )? type_name all? ( table_alias )?
  | OPEN_PAR select_stmt CLOSE_PAR ( table_alias )?
  ;
  
@@ -167,6 +197,10 @@ K_SUPERUSER
 //VIEW AUDIT
 ;
 
+all:
+(OPEN_PAR K_ALL CLOSE_PAR)
+;
+
 function_name:
 K_SUBSTR
 |K_SUBSTRING
@@ -179,7 +213,7 @@ K_SUBSTR
 ;
 
 functions_call:
-K_SUBSTR OPEN_PAR expr_simple COMMA INTEGER_LITERAL (COMMA INTEGER_LITERAL)? CLOSE_PAR
+K_SUBSTR OPEN_PAR expr_simple COMMA NUMERIC_LITERAL (COMMA NUMERIC_LITERAL)? CLOSE_PAR
 | (K_UPPER|K_LOWER|K_ASCII) OPEN_PAR expr_simple CLOSE_PAR
 | K_DATE OPEN_PAR ((STRING_LITERAL (COMMA STRING_LITERAL)?)|K_TODAY|K_NOW|K_TOMORROW|K_YESTERDAY) CLOSE_PAR
 ;
@@ -192,11 +226,11 @@ function_predicate
 
 function_id
 :
-K_ID OPEN_PAR documentum_id CLOSE_PAR
+K_ID OPEN_PAR STRING_LITERAL CLOSE_PAR
 ;
 
 functions_call_result:
-K_SUBSTR OPEN_PAR column_name COMMA INTEGER_LITERAL (COMMA INTEGER_LITERAL)? CLOSE_PAR
+K_SUBSTR OPEN_PAR column_name COMMA NUMERIC_LITERAL (COMMA NUMERIC_LITERAL)? CLOSE_PAR
 | (K_UPPER|K_LOWER|K_ASCII) OPEN_PAR result_column CLOSE_PAR
 ;
 
@@ -214,42 +248,48 @@ unary_operator
  | TILDE
  | K_NOT
  ;
+
+
  
 literal_value
- : INTEGER_LITERAL
- | NUMERIC_LITERAL
+ : NUMERIC_LITERAL
  | STRING_LITERAL
  | K_NULL
  | K_NOW
  | K_TODAY
  | K_YESTERDAY
+ | K_USER
  ;
 column_alias
  : IDENTIFIER
  | STRING_LITERAL
  ;
  column_name 
- : (table_name DOT)? any_name
+ : (type_name DOT)? any_name
  ;
 hint_function:
-K_ENABLE OPEN_PAR any_name any_name* CLOSE_PAR
+K_ENABLE OPEN_PAR any_name (any_name|NUMERIC_LITERAL)* CLOSE_PAR
 ;
 
 result_column
- : (STAR
- | table_name DOT STAR
- | column_name
- | functions_call_result
- | aggregate
- | count )
+ : (result_single_col| result_single_col PLUS result_single_col)
   ( K_AS? column_alias )?
  ;
  
+ result_single_col
+ : STAR
+ | literal_value
+ | type_name DOT STAR
+ | column_name
+ | functions_call_result
+ | aggregate
+ | count 
+ ;
  repo_owner
  : any_name
  ;
  
- table_name 
+ type_name 
  : any_name
  ;
 
@@ -260,9 +300,11 @@ table_or_index_name
  : any_name
  ;
  
- documentum_id
- : '[0-9a-f]{16}'
+ repeating_index:
+ OPEN_BRACKET NUMERIC_LITERAL CLOSE_BRACKET
  ;
+ 
+ 
  
  any_name
  : IDENTIFIER 
@@ -522,12 +564,15 @@ dql_keywords: K_ACL
 | K_YESTERDAY;
 
 /* Lexer starts below */
+
 TRUE : T R U E;
 FALSE : F A L S E; 
 SCOL : ';';
 DOT : '.';
 OPEN_PAR : '(';
 CLOSE_PAR : ')';
+OPEN_BRACKET : '[';
+CLOSE_BRACKET : ']';
 COMMA : ',';
 EQU : '=';
 STAR : '*';
@@ -548,15 +593,11 @@ GT_EQ : '>=';
 NOT_EQ1 : '!=';
 NOT_EQ2 : '<>';
 
-INTEGER_LITERAL
-: DIGIT+
-; 
 
-NUMERIC_LITERAL
- : INTEGER_LITERAL ( '.' INTEGER_LITERAL? )? ( E [-+]? INTEGER_LITERAL )?
- | '.' INTEGER_LITERAL ( E [-+]? INTEGER_LITERAL )?
- ;
- 
+NUMERIC_LITERAL:
+ DIGIT+  ('.' DIGIT+?)?  ( E [-+]? DIGIT+ )?
+ | '.' DIGIT+ ( E [-+]? DIGIT+ )?
+; 
 
 STRING_LITERAL
  : '\'' ( ~'\'' | '\'\'' )* '\''
@@ -808,7 +849,6 @@ K_YESTERDAY : Y E S T E R D A Y;
 IDENTIFIER
  : '"' (~'"' | '""')* '"'
  | '`' (~'`' | '``')* '`'
- | '[' ~']'* ']'
  | [a-zA-Z_] [a-zA-Z_0-9]* 
  ;
 
