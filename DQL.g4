@@ -3,7 +3,7 @@
  */
 grammar DQL;
 
-dql_stmt: (select_stmt|alter_group_stmt|create_group_stmt|drop_group_stmt|alter_type_stmt|create_type_stmt|drop_type_stmt|update_object_stmt|insert_stmt|update_stmt|execute_stmt|grant_stmt|revoke_stmt|change_object_stmt|delete_object_stmt|delete_stmt) SCOL?;
+dql_stmt: (select_stmt|alter_group_stmt|create_group_stmt|drop_group_stmt|alter_type_stmt|create_type_stmt|drop_type_stmt|create_object_stmt|update_object_stmt|insert_stmt|update_stmt|execute_stmt|grant_stmt|revoke_stmt|change_object_stmt|delete_object_stmt|delete_stmt) SCOL?;
  
  select_stmt: K_SELECT (K_FOR (K_BROWSE | K_READ | K_RELATE | K_WRITE | K_DELETE))? ( K_DISTINCT | K_ALL )? result_column ( COMMA result_column )*
     K_FROM ( table_or_subquery ( COMMA table_or_subquery )* ) (K_WITH expr)? in_partition? in_document_or_assembly? search_clause?
@@ -40,6 +40,14 @@ dql_stmt: (select_stmt|alter_group_stmt|create_group_stmt|drop_group_stmt|alter_
  drop_type_stmt:
  K_DROP K_TYPE STRING_LITERAL
  ;
+
+
+//CREATE type_name OBJECT update_list
+//[,SETFILE 'filepath' WITH CONTENT_FORMAT='format_name']
+//{,SETFILE 'filepath' WITH PAGE_NO=page_number}
+create_object_stmt:
+K_CREATE type_name K_OBJECT update_list (COMMA update_list)* setfile? 
+;
  
 // UPDATE [PUBLIC]type_name [(ALL)][correlation_var]
 // [WITHIN PARTITION partition_id {,partition_id}]
@@ -65,9 +73,10 @@ dql_stmt: (select_stmt|alter_group_stmt|create_group_stmt|drop_group_stmt|alter_
  K_UPDATE any_name K_SET expr_simple EQU literal_value (K_WHERE qualification)?
  ;
   
- //TODO	
+// EXECUTE admin_method_name [[FOR] object_id]
+// [WITH argument = value {,argument = value}]	
  execute_stmt:
- K_EXECUTE admin_methods
+ K_EXECUTE admin_methods (K_FOR? STRING_LITERAL)? (K_WITH IDENTIFIER EQU literal_value (COMMA IDENTIFIER EQU literal_value)* )
  ;
  
  //TODO
@@ -177,7 +186,6 @@ expr
  
  expr_simple
  :K_ANY? column_name
- | boolean_value
  | literal_value
  | functions_call
  | unary_operator expr_simple
@@ -259,6 +267,8 @@ literal_value
  | K_TODAY
  | K_YESTERDAY
  | K_USER
+ | K_TRUE
+ | K_FALSE
  ;
 column_alias
  : IDENTIFIER
@@ -290,7 +300,7 @@ result_column
  ;
  
  type_name 
- : any_name
+ : IDENTIFIER
  ;
 
 table_alias 
@@ -313,13 +323,12 @@ table_or_index_name
  ;
 
 boolean_value:
-TRUE|FALSE
+K_TRUE|K_FALSE
 ;
 
 //TODO
 admin_methods:
-
-
+IDENTIFIER
 ;
 
 
@@ -565,8 +574,6 @@ dql_keywords: K_ACL
 
 /* Lexer starts below */
 
-TRUE : T R U E;
-FALSE : F A L S E; 
 SCOL : ';';
 DOT : '.';
 OPEN_PAR : '(';
