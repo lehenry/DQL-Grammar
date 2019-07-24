@@ -79,30 +79,39 @@ K_CREATE type_name K_OBJECT update_list (COMMA update_list)* setfile?
  K_EXECUTE admin_methods (K_FOR? STRING_LITERAL)? (K_WITH IDENTIFIER EQU literal_value (COMMA IDENTIFIER EQU literal_value)* )
  ;
  
- //TODO
  grant_stmt:
  K_GRANT privilege (COMMA privilege)* K_TO STRING_LITERAL (COMMA STRING_LITERAL)*
  ;
  
-  //TODO
  revoke_stmt:
  K_REVOKE privilege (COMMA privilege)* K_FROM STRING_LITERAL (COMMA STRING_LITERAL)*
  ;
  
- 
- //TODO
+  //TODO
  change_object_stmt:
- K_CHANGE any_name K_OBJECT
+ K_CHANGE type_name all? (K_OBJECT|K_OBJECTS) K_TO type_name update_list (COMMA? update_list)? in_assembly search_clause (K_WHERE qualification)? 
  ;
  
  //TODO
  delete_object_stmt:
- K_DELETE any_name (K_OBJECT|K_OBJECTS) (K_WHERE qualification)?
+ K_DELETE type_name all? (K_OBJECT|K_OBJECTS) (K_WHERE qualification)?
  ;
  
  delete_stmt:
  K_DELETE K_FROM any_name (K_WHERE qualification)?
  ;
+ 
+ //TODO
+ register_stmt:
+ K_REGISTER K_TABLE (IDENTIFIER '.')? type_name OPEN_PAR column_def (COMMA column_def)* CLOSE_PAR  (K_WITH? K_KEY column_name (COMMA column_name)*) (K_SYNONYM K_FOR? type_name)?
+ ;
+ 
+ //TODO
+ unregister_stmt:
+ K_UNREGISTER K_TABLE? (IDENTIFIER '.')? type_name
+ ;
+ 
+ 
  
  update_list:
   K_SET property_name repeating_index? '=' (literal_value| OPEN_PAR select_stmt CLOSE_PAR)
@@ -193,16 +202,15 @@ expr
  | ( K_NULL | K_NULLID | K_NULLSTRING | K_NULLDATE | K_NULLINT )
  ;
 
-//TODO
 privilege:
 K_SUPERUSER
 |K_SYSADMIN
-//CREATE TYPE
-//CREATE CABINET
-//CREATE GROUP
-//CONFIG AUDIT
-//PURGE AUDIT
-//VIEW AUDIT
+|K_CREATE K_TYPE
+|K_CREATE K_CABINET
+|K_CREATE K_GROUP
+|K_CONFIG K_AUDIT
+|K_PURGE K_AUDIT
+|K_VIEW K_AUDIT
 ;
 
 all:
@@ -258,7 +266,6 @@ unary_operator
  ;
 
 
- 
 literal_value
  : NUMERIC_LITERAL
  | STRING_LITERAL
@@ -274,8 +281,13 @@ column_alias
  : IDENTIFIER
  | STRING_LITERAL
  ;
+ 
+ column_def 
+ : column_name datatype (OPEN_PAR NUMERIC_LITERAL CLOSE_PAR)?
+ ;
+ 
  column_name 
- : (type_name DOT)? any_name
+ : (type_name DOT)? IDENTIFIER
  ;
 hint_function:
 K_ENABLE OPEN_PAR any_name (any_name|NUMERIC_LITERAL)* CLOSE_PAR
@@ -284,6 +296,20 @@ K_ENABLE OPEN_PAR any_name (any_name|NUMERIC_LITERAL)* CLOSE_PAR
 result_column
  : (result_single_col| result_single_col PLUS result_single_col)
   ( K_AS? column_alias )?
+ ;
+ 
+ datatype:
+ K_FLOAT
+ |K_DOUBLE
+ |K_INTEGER
+ |K_INT
+ |K_TINYINT
+ |K_SMALLINT
+ |K_CHAR
+ |K_CHARACTER
+ |K_STRING
+ |K_DATE
+ |K_TIME
  ;
  
  result_single_col
@@ -326,7 +352,6 @@ boolean_value:
 K_TRUE|K_FALSE
 ;
 
-//TODO
 admin_methods:
 IDENTIFIER
 ;
@@ -626,6 +651,7 @@ K_AUTO : A U T O;
 K_ALTER : A L T E R;
 K_ALL : A L L;
 K_AS : A S;
+K_AUDIT : A U D I T;
 K_AVG : A V G;
 K_ALLOW : A L L O W;
 K_ASC : A S C;
@@ -660,6 +686,7 @@ K_COMPUTED : C O M P U T E D;
 K_CURRENT : C U R R E N T;
 K_CHECK : C H E C K;
 K_CONTAIN_ID : C O N T A I N UNDERSCORE I D;
+K_CONFIG : C O N F I G;
 K_DATE : D A T E;
 K_DELETED : D E L E T E D;
 K_DISTINCT : D I S T I N C T;
@@ -778,6 +805,7 @@ K_PATH : P A T H;
 K_PRIMARY : P R I M A R Y;
 K_PUBLIC : P U B L I C;
 K_PUBLISH : P U B L I S H;
+K_PURGE : P U R G E;
 K_QRY : Q R Y;
 K_QUALIFIABLE : Q U A L I F I A B L E;
 K_RDBMS : R D B M S;
@@ -840,6 +868,7 @@ K_UNLINK : U N L I N K;
 K_USING : U S I N G;
 K_VALUE : V A L U E;
 K_VERSION : V E R S I O N;
+K_VIEW : V I E W;
 K_VIOLATION : V I O L A T I O N;
 K_VALUES : V A L U E S;
 K_VERITY : V E R I T Y;
