@@ -28,17 +28,17 @@ dql_stmt: (select_stmt|alter_group_stmt|create_group_stmt|drop_group_stmt|alter_
  
  //TODO MODIFY, ASPECTS
  alter_type_stmt:
- K_ALTER K_TYPE any_name (K_ADD|K_DROP) property_def (COMMA  property_def)* K_PUBLISH?
+ K_ALTER K_TYPE type_name (K_ADD|K_DROP) property_def (COMMA  property_def)* K_PUBLISH?
  ;
 
-//TODO ASPECTS, CONSTRAINTS...
+//TODO ASPECTS, CONSTRAINTS... lightweight
  create_type_stmt:
- K_CREATE K_TYPE (K_PARTITIONABLE|K_SHAREABLE) STRING_LITERAL (K_WITH)? (K_ADDRESS STRING_LITERAL)? 
- ( K_MEMBERS (STRING_LITERAL (COMMA STRING_LITERAL)*| OPEN_PAR select_stmt CLOSE_PAR))?
+ K_CREATE (K_PARTITIONABLE|K_SHAREABLE)? K_TYPE type_name K_WITH? (K_SUPERTYPE (type_name|K_NULL))? 
+ ( K_MEMBERS (property_def (COMMA property_def)*| OPEN_PAR select_stmt CLOSE_PAR))? K_PUBLISH?
  ;
  
  drop_type_stmt:
- K_DROP K_TYPE STRING_LITERAL
+ K_DROP K_TYPE type_name
  ;
 
 
@@ -64,13 +64,13 @@ K_CREATE type_name K_OBJECT update_list (COMMA update_list)* setfile?
  // INSERT INTO table_name [(column_name {,column_name})] 
  // VALUES (value {,value}) | dql_subselect
  insert_stmt:
- K_INSERT K_INTO any_name column_name (COMMA column_name)* K_VALUES ((OPEN_PAR literal_value (COMMA literal_value)* CLOSE_PAR)| select_stmt )
+ K_INSERT K_INTO type_name column_name (COMMA column_name)* K_VALUES ((OPEN_PAR literal_value (COMMA literal_value)* CLOSE_PAR)| select_stmt )
  ;
    
 // UPDATE table_name SET column_assignments
 // [WHERE qualification]
  update_stmt:
- K_UPDATE any_name K_SET expr_simple EQU literal_value (K_WHERE qualification)?
+ K_UPDATE type_name K_SET expr_simple EQU literal_value (K_WHERE qualification)?
  ;
   
 // EXECUTE admin_method_name [[FOR] object_id]
@@ -87,28 +87,43 @@ K_CREATE type_name K_OBJECT update_list (COMMA update_list)* setfile?
  K_REVOKE privilege (COMMA privilege)* K_FROM STRING_LITERAL (COMMA STRING_LITERAL)*
  ;
  
-  //TODO
+//CHANGE current_type [(ALL)] OBJECT[S]
+//TO new_type[update_list]
+//[IN ASSEMBLY document_id [VERSION version_label] [DESCEND]]
+//[SEARCH fulltext search condition]
+//[WHERE qualification]
  change_object_stmt:
  K_CHANGE type_name all? (K_OBJECT|K_OBJECTS) K_TO type_name update_list (COMMA? update_list)? in_assembly search_clause (K_WHERE qualification)? 
  ;
- 
- //TODO
+
+// DELETE [PUBLIC]type_name[(ALL)]
+// [correlation_variable]
+// [WITHIN PARTITION (partition_id {,partition_id})
+// OBJECT[S]
+// [IN ASSEMBLY document_id [VERSION version_label]
+// [NODE component_id][DESCEND]]
+// [SEARCH fulltext search condition]
+// [WHERE qualification]
  delete_object_stmt:
- K_DELETE type_name all? (K_OBJECT|K_OBJECTS) (K_WHERE qualification)?
+  K_DELETE type_name all? any_name? in_partition? (K_OBJECT|K_OBJECTS) in_assembly? search_clause? (K_WHERE qualification)?
  ;
  
+ // DELETE FROM table_name WHERE qualification
  delete_stmt:
- K_DELETE K_FROM any_name (K_WHERE qualification)?
+ K_DELETE K_FROM type_name (K_WHERE qualification)?
  ;
  
- //TODO
+// REGISTER TABLE [owner_name.]table_name
+// (column_def {,column_def})
+// [[WITH] KEY (column_list)]
+// [SYNONYM [FOR] 'table_identification']
  register_stmt:
  K_REGISTER K_TABLE (IDENTIFIER '.')? type_name OPEN_PAR column_def (COMMA column_def)* CLOSE_PAR  (K_WITH? K_KEY column_name (COMMA column_name)*) (K_SYNONYM K_FOR? type_name)?
  ;
  
- //TODO
+ //UNREGISTER [TABLE] [owner_name.]table_name
  unregister_stmt:
- K_UNREGISTER K_TABLE? (IDENTIFIER '.')? type_name
+ K_UNREGISTER K_TABLE? (repo_owner '.')? type_name
  ;
  
  
@@ -130,7 +145,7 @@ K_CREATE type_name K_OBJECT update_list (COMMA update_list)* setfile?
  ;
  
  property_def:
- property_name domain K_REPEATING? (K_NOT? K_QUALIFIABLE)?
+ property_name domain K_REPEATING? (K_NOT? (K_QUALIFIABLE|K_SPACEOPTIMIZE))? property_modifier_list?
  ;
  
  property_name:
@@ -138,10 +153,66 @@ K_CREATE type_name K_OBJECT update_list (COMMA update_list)* setfile?
  ;
  
  domain:
- K_INTEGER|K_BOOLEAN|(K_STRING OPEN_PAR NUMERIC_LITERAL CLOSE_PAR)
+ |K_BOOLEAN
+ |K_BOOL
+ |K_CHAR OPEN_PAR NUMERIC_LITERAL CLOSE_PAR
+ |K_CHARACTER OPEN_PAR NUMERIC_LITERAL CLOSE_PAR
+ |K_STRING OPEN_PAR NUMERIC_LITERAL CLOSE_PAR
+ |K_DATE
+ |K_DOUBLE
+ |K_FLOAT
+ |K_ID
+ |K_INTEGER
+ |K_SMALLINT
+ |K_STRING
+ |K_TIME
+ |K_TINYINT
+  ;
+ 
+ //TODO
+ property_modifier_list:
+ value_assistance_modifier
+ |mapping_table_specification
+ |default_specification
+ |constraint_specification
  ;
  
+//TODO
+//VALUE ASSISTANCE IS
+//[IF (expression_string)
+//va_clause
+//(ELSEIF (expression_string)
+//va_clause)
+//ELSE]
+//va_clause
+//[DEPENDENCY LIST ([property_list])
+ value_assistance_modifier:
+ K_VALUE K_ASSISTANCE K_IS (K_IF OPEN_PAR expr CLOSE_PAR va_clause (K_ELSEIF OPEN_PAR expr CLOSE_PAR va_clause)* K_ELSE) va_clause 
+ (K_DEPENDENCY K_LIST OPEN_PAR property_name (COMMA property_name)? CLOSE_PAR)
+ ;
  
+//for list:
+//LIST (literal_list)
+//[VALUE ESTIMATE=number]
+//[IS [NOT] COMPLETE]
+//for query:
+//QRY 'query_string'
+//[QRY ATTR = property_name]
+//[ALLOW CACHING]
+//[VALUE ESTIMATE=number]
+//[IS [NOT] COMPLETE]
+ va_clause:
+ //TODO
+ ;
+ 
+ //TODO
+ mapping_table_specification:;
+ 
+ //TODO
+ default_specification:;
+ 
+ //TODO
+ constraint_specification:;
  
  search_clause
  : K_SEARCH (K_FIRST|K_LAST)? search_string
@@ -321,18 +392,16 @@ result_column
  | aggregate
  | count 
  ;
- repo_owner
+
+repo_owner
  : any_name
- ;
+;
  
- type_name 
+type_name 
  : IDENTIFIER
- ;
+;
 
 table_alias 
- : any_name
- ;
-table_or_index_name 
  : any_name
  ;
  
@@ -345,7 +414,6 @@ table_or_index_name
  any_name
  : IDENTIFIER 
  | STRING_LITERAL
- | OPEN_PAR any_name CLOSE_PAR
  ;
 
 boolean_value:
@@ -545,6 +613,7 @@ dql_keywords: K_ACL
 | K_STATE
 | K_SUPPORT
 | K_SEPARATOR
+| K_SPACEOPTIMIZE
 | K_STORAGE
 | K_SYNONYM
 | K_SERVER
@@ -830,6 +899,7 @@ K_SELECT : S E L E C T;
 K_STATE : S T A T E;
 K_SUPPORT : S U P P O R T;
 K_SEPARATOR : S E P A R A T O R;
+K_SPACEOPTIMIZE: S P A C E O P T I M I Z E;
 K_STORAGE : S T O R A G E;
 K_SYNONYM : S Y N O N Y M;
 K_SERVER : S E R V E R;
