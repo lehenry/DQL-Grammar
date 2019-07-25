@@ -33,8 +33,10 @@ dql_stmt: (select_stmt|alter_group_stmt|create_group_stmt|drop_group_stmt|alter_
 
 //TODO ASPECTS, CONSTRAINTS... lightweight
  create_type_stmt:
- K_CREATE (K_PARTITIONABLE|K_SHAREABLE)? K_TYPE type_name K_WITH? (K_SUPERTYPE (type_name|K_NULL))? 
- ( K_MEMBERS (property_def (COMMA property_def)*| OPEN_PAR select_stmt CLOSE_PAR))? K_PUBLISH?
+ (K_CREATE (K_PARTITIONABLE|K_SHAREABLE)? K_TYPE type_name K_WITH? (K_SUPERTYPE (type_name|K_NULL))? 
+ ( K_MEMBERS (property_def (COMMA property_def)*| OPEN_PAR select_stmt CLOSE_PAR))? K_PUBLISH?)
+ | (K_CREATE K_LIGHTWEIGHT K_TYPE type_name (property_def (COMMA  property_def)*)? K_SHARES type_name ((K_AUTO K_MATERIALIZATION)|(K_MATERIALIZATION K_ON K_REQUEST)|(K_DISALLOW K_MATERIALIZATION) )
+ (K_FULLTEXT K_SUPPORT (K_NONE|(K_LITE K_ADD K_ALL)|(K_LITE K_ADD property_name (COMMA property_name)*)|(K_BASE K_ADD K_ALL)|(K_LITE K_ADD property_name (COMMA property_name)*))?)? K_PUBLISH) 
  ;
  
  drop_type_stmt:
@@ -205,13 +207,17 @@ K_CREATE type_name K_OBJECT update_list (COMMA update_list)* setfile?
  ;
  
  //TODO
- mapping_table_specification:;
+ mapping_table_specification:
+ K_MAPPING K_TABLE
+ ;
  
  //TODO
- default_specification:;
+ default_specification:
+ K_DEFAULT;
  
  //TODO
- constraint_specification:;
+ constraint_specification:
+ K_CHECK OPEN_PAR expr CLOSE_PAR;
  
  search_clause
  : K_SEARCH (K_FIRST|K_LAST)? search_string
@@ -724,6 +730,7 @@ K_AVG : A V G;
 K_ALLOW : A L L O W;
 K_ASC : A S C;
 K_BAG : B A G;
+K_BASE : B A S E;
 K_BOOL : B O O L;
 K_BITAND : B I T A N D;
 K_BITCLR : B I T C L R;
