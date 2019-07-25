@@ -177,7 +177,6 @@ K_CREATE type_name K_OBJECT update_list (COMMA update_list)* setfile?
  |constraint_specification
  ;
  
-//TODO
 //VALUE ASSISTANCE IS
 //[IF (expression_string)
 //va_clause
