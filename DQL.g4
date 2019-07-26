@@ -31,7 +31,6 @@ dql_stmt: (select_stmt|alter_group_stmt|create_group_stmt|drop_group_stmt|alter_
 //[FOR POLICY policy_id STATE state_name]
 //type_modifier_list [PUBLISH]
 //
-//TODO
 //ALTER TYPE type_name
 //[FOR POLICY policy_id STATE state_name]
 //MODIFY (property_modifier_clause)[PUBLISH]
@@ -54,7 +53,9 @@ dql_stmt: (select_stmt|alter_group_stmt|create_group_stmt|drop_group_stmt|alter_
 //ALTER TYPE type_name FULLTEXT SUPPORT 
 //[NONE |LITE ADD ALL|LITE ADD property_list |BASE ADD ALL |BASE ADD property_list]
  alter_type_stmt:
- K_ALTER K_TYPE type_name (K_ADD|K_DROP) property_def (COMMA  property_def)* K_PUBLISH?
+  K_ALTER K_TYPE type_name for_policy? type_modifier_list 
+ |K_ALTER K_TYPE type_name for_policy? K_MODIFY OPEN_PAR ((property_name OPEN_PAR update_list (COMMA update_list)* CLOSE_PAR) |property_modifier_list)? CLOSE_PAR K_PUBLISH?
+ |K_ALTER K_TYPE type_name (K_ADD|K_DROP) property_def (COMMA  property_def)* K_PUBLISH?
  |K_ALTER K_TYPE type_name K_ALLOW K_ASPECTS
  |K_ALTER K_TYPE type_name (K_ADD|K_SET|K_REMOVE) K_DEFAULT K_ASPECTS aspect_list
  |K_ALTER K_TYPE type_name K_ENABLE K_PARTITION
@@ -126,7 +127,7 @@ K_CREATE type_name K_OBJECT update_list (COMMA update_list)* setfile?
 //[SEARCH fulltext search condition]
 //[WHERE qualification]
  change_object_stmt:
- K_CHANGE type_name all? (K_OBJECT|K_OBJECTS) K_TO type_name update_list (COMMA? update_list)? in_assembly search_clause (K_WHERE qualification)? 
+ K_CHANGE type_name all? (K_OBJECT|K_OBJECTS) K_TO type_name (update_list|link_list) (COMMA? (update_list|link_list))? in_assembly search_clause (K_WHERE qualification)? 
  ;
 
 // DELETE [PUBLIC]type_name[(ALL)]
@@ -159,7 +160,13 @@ K_CREATE type_name K_OBJECT update_list (COMMA update_list)* setfile?
  K_UNREGISTER K_TABLE? (repo_owner '.')? type_name
  ;
  
- 
+ update_type_modifier:
+  property_name OPEN_PAR update_list (COMMA update_list)* CLOSE_PAR
+  |K_SET K_DEFAULT K_ACL (STRING_LITERAL|K_NULL) (K_IN STRING_LITERAL)?
+  |K_SET K_DEFAULT K_STORAGE EQU? STRING_LITERAL
+  |K_SET K_DEFAULT K_GROUP EQU? (STRING_LITERAL|K_NULL)
+  |K_SET K_DEFAULT K_BUSINESS K_POLICY EQU? STRING_LITERAL (K_VERSION STRING_LITERAL)?
+ ;
  
  update_list:
   K_SET property_name repeating_index? '=' (literal_value| OPEN_PAR select_stmt CLOSE_PAR)
@@ -167,7 +174,10 @@ K_CREATE type_name K_OBJECT update_list (COMMA update_list)* setfile?
  |K_INSERT property_name repeating_index? '=' (literal_value| OPEN_PAR select_stmt CLOSE_PAR)
  |K_REMOVE property_name repeating_index?
  |K_TRUNCATE property_name repeating_index?
- |K_LINK STRING_LITERAL
+ ;
+
+link_list:
+ K_LINK STRING_LITERAL
  |K_UNLINK STRING_LITERAL
  |K_MOVE K_TO? STRING_LITERAL
  ;
@@ -201,6 +211,19 @@ K_CREATE type_name K_OBJECT update_list (COMMA update_list)* setfile?
  |K_TIME
  |K_TINYINT
   ;
+ 
+ for_policy:
+  K_FOR K_POLICY any_name K_STATE any_name
+ ;
+ 
+ //TODO
+ type_modifier_list:
+  update_type_modifier
+ |mapping_table_specification
+ |constraint_specification
+//component_specification
+//type_drop_clause
+ ;
  
  //TODO
  property_modifier_list:
