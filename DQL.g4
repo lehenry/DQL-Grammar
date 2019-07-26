@@ -26,17 +26,48 @@ dql_stmt: (select_stmt|alter_group_stmt|create_group_stmt|drop_group_stmt|alter_
  K_DROP K_GROUP any_name
  ;
  
- //TODO MODIFY, ASPECTS
+//TODO 
+//ALTER TYPE type_name
+//[FOR POLICY policy_id STATE state_name]
+//type_modifier_list [PUBLISH]
+//
+//TODO
+//ALTER TYPE type_name
+//[FOR POLICY policy_id STATE state_name]
+//MODIFY (property_modifier_clause)[PUBLISH]
+//
+//ALTER TYPE type_name
+//ADD property_def {,property_def}[PUBLISH]
+//
+//ALTER TYPE type_name
+//DROP property_def {,property_def}[PUBLISH]
+//
+//ALTER TYPE type_name ALLOW ASPECTS
+//
+//ALTER TYPE type_name
+//ADD|SET|REMOVE DEFAULT ASPECTS aspect_list
+//
+//ALTER TYPE type_name ENABLE PARTITION
+//
+//ALTER TYPE type_name SHAREABLE [PUBLISH]
+//
+//ALTER TYPE type_name FULLTEXT SUPPORT 
+//[NONE |LITE ADD ALL|LITE ADD property_list |BASE ADD ALL |BASE ADD property_list]
  alter_type_stmt:
  K_ALTER K_TYPE type_name (K_ADD|K_DROP) property_def (COMMA  property_def)* K_PUBLISH?
+ |K_ALTER K_TYPE type_name K_ALLOW K_ASPECTS
+ |K_ALTER K_TYPE type_name (K_ADD|K_SET|K_REMOVE) K_DEFAULT K_ASPECTS aspect_list
+ |K_ALTER K_TYPE type_name K_ENABLE K_PARTITION
+ |K_ALTER K_TYPE type_name K_SHAREABLE K_PUBLISH?
+ |K_ALTER K_TYPE type_name fulltext_support
  ;
 
-//TODO ASPECTS, CONSTRAINTS... lightweight
+//TODO ASPECTS, CONSTRAINTS... 
  create_type_stmt:
  (K_CREATE (K_PARTITIONABLE|K_SHAREABLE)? K_TYPE type_name K_WITH? (K_SUPERTYPE (type_name|K_NULL))? 
  ( K_MEMBERS (property_def (COMMA property_def)*| OPEN_PAR select_stmt CLOSE_PAR))? K_PUBLISH?)
  | (K_CREATE K_LIGHTWEIGHT K_TYPE type_name (property_def (COMMA  property_def)*)? K_SHARES type_name ((K_AUTO K_MATERIALIZATION)|(K_MATERIALIZATION K_ON K_REQUEST)|(K_DISALLOW K_MATERIALIZATION) )
- (K_FULLTEXT K_SUPPORT (K_NONE|(K_LITE K_ADD K_ALL)|(K_LITE K_ADD property_name (COMMA property_name)*)|(K_BASE K_ADD K_ALL)|(K_LITE K_ADD property_name (COMMA property_name)*))?)? K_PUBLISH) 
+ (fulltext_support)? K_PUBLISH) 
  ;
  
  drop_type_stmt:
@@ -177,6 +208,14 @@ K_CREATE type_name K_OBJECT update_list (COMMA update_list)* setfile?
  |mapping_table_specification
  |default_specification
  |constraint_specification
+ ;
+ 
+ aspect_list:
+  any_name (COMMA any_name)*
+ ;
+ 
+ fulltext_support:
+ K_FULLTEXT K_SUPPORT (K_NONE|(K_LITE K_ADD K_ALL)|(K_LITE K_ADD property_name (COMMA property_name)*)|(K_BASE K_ADD K_ALL)|(K_LITE K_ADD property_name (COMMA property_name)*))?
  ;
  
 //VALUE ASSISTANCE IS
@@ -413,8 +452,6 @@ table_alias
  repeating_index:
  OPEN_BRACKET NUMERIC_LITERAL CLOSE_BRACKET
  ;
- 
- 
  
  any_name
  : IDENTIFIER 
@@ -712,6 +749,7 @@ STRING_LITERAL
 K_ACL : A C L;
 K_AND : A N D;
 K_ASSEMBLY : A S S E M B L Y;
+K_ASPECTS: A S P E C T;
 K_ADD : A D D;
 K_ANY : A N Y;
 K_ASCII : A S C I I;
@@ -960,7 +998,6 @@ K_YESTERDAY : Y E S T E R D A Y;
 
 IDENTIFIER
  : '"' (~'"' | '""')* '"'
- | '`' (~'`' | '``')* '`'
  | [a-zA-Z_] [a-zA-Z_0-9]* 
  ;
 
