@@ -303,7 +303,7 @@ link_list:
  ;
  
  in_document_or_assembly
- : (K_DOCUMENT|K_ASSEMBLY) function_id (K_VERSION any_name)? K_DESCEND? (K_WITH expr)? (K_NODESORT K_BY column_name (COMMA column_name)* sort_order?)?
+ : K_IN (K_DOCUMENT|K_ASSEMBLY) function_id (K_VERSION any_name)? K_DESCEND? (K_WITH expr)? (K_NODESORT K_BY column_name (COMMA column_name)* sort_order?)?
  ;
 
  in_assembly
