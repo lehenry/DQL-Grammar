@@ -92,7 +92,7 @@ K_CREATE type_name K_OBJECT update_list (COMMA update_list)* setfile?
 // [SEARCH fulltext search condition]
 // [WHERE qualification]
  update_object_stmt:
- K_UPDATE type_name all? any_name? in_partition? (K_OBJECT|K_OBJECTS) update_list (COMMA update_list)* setfile? in_assembly? search_clause? (K_WHERE qualification)?
+ K_UPDATE type_name all? any_name? in_partition? (K_OBJECT|K_OBJECTS) (update_list|link_list) (COMMA? (update_list|link_list))* setfile? in_assembly? search_clause? (K_WHERE qualification)?
  ;
 
  // INSERT INTO table_name [(column_name {,column_name})] 
@@ -222,7 +222,7 @@ link_list:
  |mapping_table_specification
  |constraint_specification
 //component_specification
-//type_drop_clause
+ |type_drop_clause
  ;
  
  //TODO
@@ -281,6 +281,15 @@ link_list:
  constraint_specification:
  K_CHECK OPEN_PAR expr CLOSE_PAR;
  
+ component_specification:
+ K_COMPONENTS STRING_LITERAL EQU (STRING_LITERAL|K_NONE) (STRING_LITERAL EQU (STRING_LITERAL|K_NONE))*
+ ;
+ 
+ type_drop_clause:
+ K_DROP K_CHECK
+ |K_DROP K_COMPONENTS	
+ ;
+ 
  search_clause
  : K_SEARCH (K_FIRST|K_LAST)? search_string
  ;
@@ -318,7 +327,7 @@ qualification:
 ; 
  
 expr
- : function_predicate
+ : K_NOT? function_predicate
  | expr_simple ( '<' | '<=' | '>' | '>=' ) expr_simple
  | expr_simple ( '=' | '!=' | '<>' | K_IS | K_IS K_NOT | K_IN | K_LIKE ) expr_simple
  | expr_simple K_NOT? ( K_LIKE ) expr_simple ( K_ESCAPE STRING_LITERAL )?
@@ -333,6 +342,7 @@ expr
  
  expr_simple
  :K_ANY? column_name
+ | OPEN_PAR expr_simple CLOSE_PAR
  | literal_value
  | functions_call
  | unary_operator expr_simple
