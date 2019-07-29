@@ -5,7 +5,7 @@ grammar DQL;
 
 dql_stmt: (select_stmt|alter_group_stmt|create_group_stmt|drop_group_stmt|alter_type_stmt|create_type_stmt|drop_type_stmt|create_object_stmt|update_object_stmt|insert_stmt|update_stmt|execute_stmt|grant_stmt|revoke_stmt|change_object_stmt|delete_object_stmt|delete_stmt|register_stmt|unregister_stmt) SCOL?;
  
- select_stmt: K_SELECT (K_FOR (K_BROWSE | K_READ | K_RELATE | K_WRITE | K_DELETE))? ( K_DISTINCT | K_ALL )? result_column ( COMMA result_column )*
+ select_stmt: K_SELECT (K_FOR (K_BROWSE | K_READ | K_RELATE | K_WRITE | K_DELETE))? ( K_DISTINCT | K_ALL )? (STAR | result_column) ( COMMA result_column )*
     K_FROM ( table_or_subquery ( COMMA table_or_subquery )* ) (K_WITH expr)? in_partition? in_document_or_assembly? search_clause?
    ( K_WHERE qualification )?
    ( K_GROUP K_BY column_name ( COMMA column_name)* ( K_HAVING (aggregate|count)( '<' | '<=' | '>' | '>=' | '=' ) NUMERIC_LITERAL )? )?  (hint_function)?
@@ -80,7 +80,7 @@ dql_stmt: (select_stmt|alter_group_stmt|create_group_stmt|drop_group_stmt|alter_
 //[,SETFILE 'filepath' WITH CONTENT_FORMAT='format_name']
 //{,SETFILE 'filepath' WITH PAGE_NO=page_number}
 create_object_stmt:
-K_CREATE type_name K_OBJECT update_list (COMMA update_list)* setfile? 
+K_CREATE type_name K_OBJECT (update_list|link_list) (COMMA (update_list|link_list))* setfile? 
 ;
  
 // UPDATE [PUBLIC]type_name [(ALL)][correlation_var]
@@ -341,11 +341,11 @@ expr
  ;
  
  expr_simple
- :K_ANY? column_name
- | OPEN_PAR expr_simple CLOSE_PAR
+ : K_ANY? column_name
+ | (OPEN_PAR expr_simple CLOSE_PAR)
  | literal_value
  | functions_call
- | unary_operator expr_simple
+ | (unary_operator expr_simple)
  | expr_simple ( '*' | '/' | '%' | '+' | '-') expr_simple
  | ( K_NULL | K_NULLID | K_NULLSTRING | K_NULLDATE | K_NULLINT )
  ;
@@ -377,15 +377,15 @@ K_SUBSTR
 ;
 
 functions_call:
-K_SUBSTR OPEN_PAR expr_simple COMMA NUMERIC_LITERAL (COMMA NUMERIC_LITERAL)? CLOSE_PAR
-| (K_UPPER|K_LOWER|K_ASCII) OPEN_PAR expr_simple CLOSE_PAR
-| K_DATE OPEN_PAR ((STRING_LITERAL (COMMA STRING_LITERAL)?)|K_TODAY|K_NOW|K_TOMORROW|K_YESTERDAY) CLOSE_PAR
+  (K_SUBSTR OPEN_PAR expr_simple COMMA NUMERIC_LITERAL (COMMA NUMERIC_LITERAL)? CLOSE_PAR)
+| ((K_UPPER|K_LOWER|K_ASCII) OPEN_PAR expr_simple CLOSE_PAR)
+| (K_DATE OPEN_PAR ((STRING_LITERAL (COMMA STRING_LITERAL)?)|K_TODAY|K_NOW|K_TOMORROW|K_YESTERDAY) CLOSE_PAR)
 ;
 
 function_predicate
 :
- (K_FOLDER|K_CABINET) OPEN_PAR (STRING_LITERAL|function_id) (COMMA K_DESCEND)? CLOSE_PAR
-| K_TYPE OPEN_PAR STRING_LITERAL CLOSE_PAR
+ ((K_FOLDER|K_CABINET) OPEN_PAR (STRING_LITERAL|function_id) (COMMA K_DESCEND)? CLOSE_PAR)
+| (K_TYPE OPEN_PAR STRING_LITERAL CLOSE_PAR)
 ;
 
 function_id
@@ -394,8 +394,8 @@ K_ID OPEN_PAR STRING_LITERAL CLOSE_PAR
 ;
 
 functions_call_result:
-K_SUBSTR OPEN_PAR column_name COMMA NUMERIC_LITERAL (COMMA NUMERIC_LITERAL)? CLOSE_PAR
-| (K_UPPER|K_LOWER|K_ASCII) OPEN_PAR result_column CLOSE_PAR
+  (K_SUBSTR OPEN_PAR column_name COMMA NUMERIC_LITERAL (COMMA NUMERIC_LITERAL)? CLOSE_PAR)
+| ((K_UPPER|K_LOWER|K_ASCII) OPEN_PAR result_column CLOSE_PAR)
 ;
 
 count:
@@ -403,7 +403,7 @@ K_COUNT OPEN_PAR (K_DISTINCT? (column_name | STAR )) CLOSE_PAR
 ;
 
 aggregate:
-(K_MIN|K_MAX|K_AVG) OPEN_PAR K_DISTINCT? column_name CLOSE_PAR
+(K_MIN|K_MAX|K_AVG|K_SUM) OPEN_PAR K_DISTINCT? column_name CLOSE_PAR
 ;
 
 unary_operator
@@ -443,12 +443,11 @@ K_ENABLE OPEN_PAR any_name (any_name|NUMERIC_LITERAL)* CLOSE_PAR
 ;
 
 result_column
- : (result_single_col| result_single_col PLUS result_single_col)
-  ( K_AS? column_alias )?
+ : result_single_col  ( K_AS? column_alias )?
  ;
  
  datatype:
- K_FLOAT
+  K_FLOAT
  |K_DOUBLE
  |K_INTEGER
  |K_INT
@@ -462,13 +461,14 @@ result_column
  ;
  
  result_single_col
- : STAR
- | literal_value
- | type_name DOT STAR
+ : literal_value
+ | (type_name DOT STAR)
  | column_name
  | functions_call_result
  | aggregate
- | count 
+ | count
+ | result_single_col (PLUS|MINUS|DIV|STAR) result_single_col
+ | OPEN_PAR result_single_col CLOSE_PAR  
  ;
 
 repo_owner
