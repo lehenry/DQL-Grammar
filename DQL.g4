@@ -3,7 +3,7 @@
  */
 grammar DQL;
 
-dql_stmt: (select_stmt|alter_group_stmt|create_group_stmt|drop_group_stmt|alter_type_stmt|create_type_stmt|drop_type_stmt|create_object_stmt|update_object_stmt|insert_stmt|update_stmt|execute_stmt|grant_stmt|revoke_stmt|change_object_stmt|delete_object_stmt|delete_stmt) SCOL?;
+dql_stmt: (select_stmt|alter_group_stmt|create_group_stmt|drop_group_stmt|alter_type_stmt|create_type_stmt|drop_type_stmt|create_object_stmt|update_object_stmt|insert_stmt|update_stmt|execute_stmt|grant_stmt|revoke_stmt|change_object_stmt|delete_object_stmt|delete_stmt|register_stmt|unregister_stmt) SCOL?;
  
  select_stmt: K_SELECT (K_FOR (K_BROWSE | K_READ | K_RELATE | K_WRITE | K_DELETE))? ( K_DISTINCT | K_ALL )? result_column ( COMMA result_column )*
     K_FROM ( table_or_subquery ( COMMA table_or_subquery )* ) (K_WITH expr)? in_partition? in_document_or_assembly? search_clause?
@@ -436,6 +436,7 @@ column_alias
  
  column_name 
  : (type_name DOT)? IDENTIFIER
+ | OPEN_PAR (type_name DOT)? IDENTIFIER CLOSE_PAR
  ;
 hint_function:
 K_ENABLE OPEN_PAR any_name (any_name|NUMERIC_LITERAL)* CLOSE_PAR
