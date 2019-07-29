@@ -65,9 +65,9 @@ dql_stmt: (select_stmt|alter_group_stmt|create_group_stmt|drop_group_stmt|alter_
 
 //TODO ASPECTS, CONSTRAINTS... 
  create_type_stmt:
- (K_CREATE (K_PARTITIONABLE|K_SHAREABLE)? K_TYPE type_name K_WITH? (K_SUPERTYPE (type_name|K_NULL))? 
- ( K_MEMBERS (property_def (COMMA property_def)*| OPEN_PAR select_stmt CLOSE_PAR))? K_PUBLISH?)
- | (K_CREATE K_LIGHTWEIGHT K_TYPE type_name (property_def (COMMA  property_def)*)? K_SHARES type_name ((K_AUTO K_MATERIALIZATION)|(K_MATERIALIZATION K_ON K_REQUEST)|(K_DISALLOW K_MATERIALIZATION) )
+ (K_CREATE (K_PARTITIONABLE|K_SHAREABLE)? K_TYPE type_name 
+ ( OPEN_PAR property_def (COMMA property_def)* CLOSE_PAR)? K_WITH? (K_SUPERTYPE (type_name|K_NULL))? K_PUBLISH?)
+ | (K_CREATE K_LIGHTWEIGHT K_TYPE type_name (property_def (COMMA  property_def)*)? K_WITH? (K_SUPERTYPE (type_name|K_NULL))? K_SHARES type_name ((K_AUTO K_MATERIALIZATION)|(K_MATERIALIZATION K_ON K_REQUEST)|(K_DISALLOW K_MATERIALIZATION) )
  (fulltext_support)? K_PUBLISH) 
  ;
  
