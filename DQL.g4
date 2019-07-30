@@ -307,8 +307,10 @@ link_list:
  
  //TODO
  constraint_specification:
- K_CHECK OPEN_PAR expr CLOSE_PAR
- | K_ADD ;
+   K_CHECK OPEN_PAR expr CLOSE_PAR
+ | K_NOT K_NULL
+ | K_ADD (K_PRIMARY|K_FOREIGN|K_UNIQUE) K_KEY column_name
+ ;
  
  component_specification:
  K_COMPONENTS STRING_LITERAL EQU (STRING_LITERAL|K_NONE) (STRING_LITERAL EQU (STRING_LITERAL|K_NONE))*
