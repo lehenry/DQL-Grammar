@@ -54,8 +54,9 @@ dql_stmt: (select_stmt|alter_group_stmt|create_group_stmt|drop_group_stmt|alter_
 //[NONE |LITE ADD ALL|LITE ADD property_list |BASE ADD ALL |BASE ADD property_list]
  alter_type_stmt:
   K_ALTER K_TYPE type_name for_policy? type_modifier_list 
- |K_ALTER K_TYPE type_name for_policy? K_MODIFY OPEN_PAR ((property_name OPEN_PAR update_list (COMMA update_list)* CLOSE_PAR) |property_modifier_list)? CLOSE_PAR K_PUBLISH?
- |K_ALTER K_TYPE type_name (K_ADD|K_DROP) property_def (COMMA  property_def)* K_PUBLISH?
+ |K_ALTER K_TYPE type_name for_policy? K_MODIFY (property_modifier_clause|(OPEN_PAR property_modifier_clause CLOSE_PAR)) CLOSE_PAR K_PUBLISH?
+ |K_ALTER K_TYPE type_name K_ADD property_def (COMMA  property_def)* K_PUBLISH?
+ |K_ALTER K_TYPE type_name K_DROP property_name (COMMA  property_name)* K_PUBLISH?
  |K_ALTER K_TYPE type_name K_ALLOW K_ASPECTS
  |K_ALTER K_TYPE type_name (K_ADD|K_SET|K_REMOVE) K_DEFAULT K_ASPECTS aspect_list
  |K_ALTER K_TYPE type_name K_ENABLE K_PARTITION
@@ -161,11 +162,17 @@ K_CREATE type_name K_OBJECT (update_list|link_list) (COMMA (update_list|link_lis
  ;
  
  update_type_modifier:
-  property_name OPEN_PAR update_list (COMMA update_list)* CLOSE_PAR
+  update_modifier
   |K_SET K_DEFAULT K_ACL (STRING_LITERAL|K_NULL) (K_IN STRING_LITERAL)?
   |K_SET K_DEFAULT K_STORAGE EQU? STRING_LITERAL
   |K_SET K_DEFAULT K_GROUP EQU? (STRING_LITERAL|K_NULL)
   |K_SET K_DEFAULT K_BUSINESS K_POLICY EQU? STRING_LITERAL (K_VERSION STRING_LITERAL)?
+ ;
+ 
+ update_modifier:
+  property_modifier_list
+ |update_list
+ |K_SET K_DEFAULT K_BUSINESS K_POLICY EQU? (literal_value (K_VERSION literal_value)?| K_NONE | K_NULL)
  ;
  
  update_list:
@@ -174,7 +181,7 @@ K_CREATE type_name K_OBJECT (update_list|link_list) (COMMA (update_list|link_lis
  |K_INSERT property_name repeating_index? '=' (literal_value| OPEN_PAR select_stmt CLOSE_PAR)
  |K_REMOVE property_name repeating_index?
  |K_TRUNCATE property_name repeating_index?
- ;
+  ;
 
 link_list:
  K_LINK STRING_LITERAL
@@ -221,8 +228,12 @@ link_list:
   update_type_modifier
  |mapping_table_specification
  |constraint_specification
-//component_specification
+ |component_specification
  |type_drop_clause
+ ;
+ 
+ property_modifier_clause:
+  property_name OPEN_PAR ( update_list (COMMA update_list)* | property_modifier_list )
  ;
  
  //TODO
@@ -250,7 +261,7 @@ link_list:
 //va_clause
 //[DEPENDENCY LIST ([property_list])
  value_assistance_modifier:
- K_VALUE K_ASSISTANCE K_IS (K_IF OPEN_PAR expr CLOSE_PAR va_clause (K_ELSEIF OPEN_PAR expr CLOSE_PAR va_clause)* K_ELSE) va_clause 
+ K_VALUE K_ASSISTANCE K_IS (K_IF OPEN_PAR expr CLOSE_PAR va_clause (K_ELSEIF OPEN_PAR expr CLOSE_PAR va_clause)* K_ELSE)? va_clause 
  (K_DEPENDENCY K_LIST OPEN_PAR property_name (COMMA property_name)? CLOSE_PAR)
  ;
  
@@ -265,21 +276,34 @@ link_list:
 //[VALUE ESTIMATE=number]
 //[IS [NOT] COMPLETE]
  va_clause:
- //TODO
+ K_LIST OPEN_PAR literal_value (COMMA literal_value)* CLOSE_PAR
+ |K_QRY STRING_LITERAL (K_QRY K_ATTR EQU property_name)?
+(K_ALLOW K_CACHING)?
+(K_VALUE K_ESTIMATE EQU NUMERIC_LITERAL)
+(K_IS K_NOT? K_COMPLETE)?
  ;
  
  //TODO
  mapping_table_specification:
- K_MAPPING K_TABLE
+ K_MAPPING K_TABLE OPEN_PAR map_element (COMMA map_element) CLOSE_PAR
+ ;
+ 
+ map_element:
+ K_VALUE EQU literal_value (K_DISPLAY EQU literal_value)? (K_COMMENT EQU literal_value)?
  ;
  
  //TODO
  default_specification:
- K_DEFAULT;
+ K_DEFAULT EQU? (default_value | OPEN_PAR default_value (COMMA default_value)* CLOSE_PAR);
+ 
+ default_value:
+ literal_value|K_USER | K_NOW | K_TODAY | K_TOMORROW | K_YESTERDAY | K_NULL| K_DATE OPEN_PAR default_value CLOSE_PAR
+ ;
  
  //TODO
  constraint_specification:
- K_CHECK OPEN_PAR expr CLOSE_PAR;
+ K_CHECK OPEN_PAR expr CLOSE_PAR
+ | K_ADD ;
  
  component_specification:
  K_COMPONENTS STRING_LITERAL EQU (STRING_LITERAL|K_NONE) (STRING_LITERAL EQU (STRING_LITERAL|K_NONE))*
