@@ -171,7 +171,6 @@ K_CREATE type_name K_OBJECT (update_list|link_list) (COMMA (update_list|link_lis
  
  update_modifier:
   property_modifier_list
- |update_list
  |K_SET K_DEFAULT K_BUSINESS K_POLICY EQU? (literal_value (K_VERSION literal_value)?| K_NONE | K_NULL)
  ;
  
@@ -195,7 +194,7 @@ link_list:
  ;
  
  property_def:
- property_name domain K_REPEATING? (K_NOT? (K_QUALIFIABLE|K_SPACEOPTIMIZE))? property_modifier_list?
+ property_name domain K_REPEATING? (K_NOT? (K_QUALIFIABLE|K_SPACEOPTIMIZE))? (OPEN_PAR property_modifier_list (COMMA property_modifier_list)* CLOSE_PAR)?
  ;
  
  property_name:
@@ -233,7 +232,7 @@ link_list:
  ;
  
  property_modifier_clause:
-  property_name OPEN_PAR ( update_list (COMMA update_list)* | property_modifier_list | property_drop_clause )
+  property_name OPEN_PAR ( property_modifier_list (COMMA property_modifier_list)* | property_drop_clause )
  ;
  
  //TODO
@@ -242,6 +241,7 @@ link_list:
  |mapping_table_specification
  |default_specification
  |constraint_specification
+ |update_list
  ;
  
  property_drop_clause:
@@ -307,9 +307,13 @@ link_list:
  
  //TODO
  constraint_specification:
-   K_CHECK OPEN_PAR expr CLOSE_PAR
+ ( K_CHECK OPEN_PAR STRING_LITERAL (K_LANGUAGE K_DOCBASIC)? CLOSE_PAR
  | K_NOT K_NULL
- | K_ADD (K_PRIMARY|K_FOREIGN|K_UNIQUE) K_KEY column_name
+ | K_ADD (K_PRIMARY|K_FOREIGN) K_KEY column_name 
+ | K_ADD K_UNIQUE K_KEY
+ )
+ (K_REPORT STRING_LITERAL (K_ON K_VIOLATION)?)?
+ (K_ENFORCE K_BY K_APPLICATION)?
  ;
  
  component_specification:
