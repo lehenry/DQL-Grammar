@@ -233,7 +233,7 @@ link_list:
  ;
  
  property_modifier_clause:
-  property_name OPEN_PAR ( update_list (COMMA update_list)* | property_modifier_list )
+  property_name OPEN_PAR ( update_list (COMMA update_list)* | property_modifier_list | property_drop_clause )
  ;
  
  //TODO
@@ -242,6 +242,11 @@ link_list:
  |mapping_table_specification
  |default_specification
  |constraint_specification
+ ;
+ 
+ property_drop_clause:
+ K_DROP K_VALUE K_ASSISTANCE
+ |K_DROP K_MAPPING K_TABLE
  ;
  
  aspect_list:
@@ -259,10 +264,10 @@ link_list:
 //va_clause)
 //ELSE]
 //va_clause
-//[DEPENDENCY LIST ([property_list])
+//[DEPENDENCY LIST ([property_list])]
  value_assistance_modifier:
  K_VALUE K_ASSISTANCE K_IS (K_IF OPEN_PAR expr CLOSE_PAR va_clause (K_ELSEIF OPEN_PAR expr CLOSE_PAR va_clause)* K_ELSE)? va_clause 
- (K_DEPENDENCY K_LIST OPEN_PAR property_name (COMMA property_name)? CLOSE_PAR)
+ (K_DEPENDENCY K_LIST OPEN_PAR property_name (COMMA property_name)? CLOSE_PAR)?
  ;
  
 //for list:
@@ -276,10 +281,10 @@ link_list:
 //[VALUE ESTIMATE=number]
 //[IS [NOT] COMPLETE]
  va_clause:
- K_LIST OPEN_PAR literal_value (COMMA literal_value)* CLOSE_PAR
+ (K_LIST OPEN_PAR literal_value (COMMA literal_value)* CLOSE_PAR
  |K_QRY STRING_LITERAL (K_QRY K_ATTR EQU property_name)?
-(K_ALLOW K_CACHING)?
-(K_VALUE K_ESTIMATE EQU NUMERIC_LITERAL)
+(K_ALLOW K_CACHING)?)
+(K_VALUE K_ESTIMATE EQU NUMERIC_LITERAL)?
 (K_IS K_NOT? K_COMPLETE)?
  ;
  
